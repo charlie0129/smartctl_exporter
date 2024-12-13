@@ -16,7 +16,7 @@ package main
 import (
 	"fmt"
 	"log/slog"
-	"regexp"
+	"path"
 	"strings"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -43,27 +43,7 @@ type SMARTctl struct {
 }
 
 func extractDiskName(input string) string {
-	re := regexp.MustCompile(`^(?:/dev/(?P<bus_name>\S+)/(?P<bus_num>\S+)\s\[|/dev/|\[)(?:\s\[|)(?P<disk>[a-z0-9_]+)(?:\].*|)$`)
-	match := re.FindStringSubmatch(input)
-
-	if len(match) > 0 {
-		busNameIndex := re.SubexpIndex("bus_name")
-		busNumIndex := re.SubexpIndex("bus_num")
-		diskIndex := re.SubexpIndex("disk")
-		var name []string
-		if busNameIndex != -1 && match[busNameIndex] != "" {
-			name = append(name, match[busNameIndex])
-		}
-		if busNumIndex != -1 && match[busNumIndex] != "" {
-			name = append(name, match[busNumIndex])
-		}
-		if diskIndex != -1 && match[diskIndex] != "" {
-			name = append(name, match[diskIndex])
-		}
-
-		return strings.Join(name, "_")
-	}
-	return ""
+	return path.Base(input)
 }
 
 // NewSMARTctl is smartctl constructor
