@@ -22,7 +22,7 @@ import (
 	"sync"
 	"time"
 
-	kingpin "github.com/alecthomas/kingpin/v2"
+	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/collectors"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -77,10 +77,7 @@ func (i *SMARTctlManagerCollector) Collect(ch chan<- prometheus.Metric) {
 }
 
 var (
-	smartctlPath     *string
-	smartctlInterval = kingpin.Flag("smartctl.interval",
-		"The interval between smartctl polls",
-	).Default("60s").Duration()
+	smartctlPath    *string
 	smartctlDevices = kingpin.Flag("smartctl.device",
 		"The device to monitor (repeatable)",
 	).Strings()

@@ -19,25 +19,10 @@ import (
 	"os"
 	"os/exec"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/tidwall/gjson"
 )
-
-// JSONCache caching json
-type JSONCache struct {
-	JSON        gjson.Result
-	LastCollect time.Time
-}
-
-var (
-	jsonCache sync.Map
-)
-
-func init() {
-	jsonCache.Store("", JSONCache{})
-}
 
 // Parse json to gjson object
 func parseJSON(data string) gjson.Result {
@@ -72,22 +57,8 @@ func readSMARTctl(logger *slog.Logger, device Device) (gjson.Result, bool) {
 	json := parseJSON(cleaned_out)
 	rcOk := resultCodeIsOk(logger, device, json.Get("smartctl.exit_status").Int())
 	jsonOk := jsonIsOk(logger, json)
-	logger.Debug("Collected S.M.A.R.T. json data", "device", device.Info_Name, "duration", time.Since(start))
+	logger.Info("Collected S.M.A.R.T. json data", "device", device.Info_Name, "duration", time.Since(start))
 	return json, rcOk && jsonOk
-}
-
-func readSMARTctlDevices(logger *slog.Logger) gjson.Result {
-	logger.Debug("Scanning for devices")
-	out, err := exec.Command(*smartctlPath, "--json", "--scan").Output()
-	if exiterr, ok := err.(*exec.ExitError); ok {
-		logger.Debug("Exit Status", "exit_code", exiterr.ExitCode())
-		// The smartctl command returns 2 if devices are sleeping, ignore this error.
-		if exiterr.ExitCode() != 2 {
-			logger.Warn("S.M.A.R.T. output reading error", "err", err)
-			return gjson.Result{}
-		}
-	}
-	return parseJSON(string(out))
 }
 
 func readSMARTctlDevice(logger *slog.Logger, devName string) gjson.Result {
@@ -109,20 +80,12 @@ func readData(logger *slog.Logger, device Device) gjson.Result {
 		return readFakeSMARTctl(logger, device)
 	}
 
-	cacheValue, cacheOk := jsonCache.Load(device)
-	if !cacheOk || time.Now().After(cacheValue.(JSONCache).LastCollect.Add(*smartctlInterval)) {
-		json, ok := readSMARTctl(logger, device)
-		if ok {
-			jsonCache.Store(device, JSONCache{JSON: json, LastCollect: time.Now()})
-			j, found := jsonCache.Load(device)
-			if !found {
-				logger.Warn("device not found", "device", device.Info_Name)
-			}
-			return j.(JSONCache).JSON
-		}
+	json, ok := readSMARTctl(logger, device)
+	if !ok {
 		return gjson.Result{}
 	}
-	return cacheValue.(JSONCache).JSON
+
+	return json
 }
 
 // Parse smartctl return code
